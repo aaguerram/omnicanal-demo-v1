@@ -1,0 +1,52 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:042278586355:log-group:/aws/lambda/telegram-inbound-adapter:*"
+    },
+    {
+      "Sid": "DynamoDbSessions",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:042278586355:table/ConversationSessions"
+    },
+    {
+      "Sid": "ConnectStartChat",
+      "Effect": "Allow",
+      "Action": "connect:StartChatContact",
+      "Resource": "arn:aws:connect:us-east-1:042278586355:instance/1029ff15-e0f3-4b9c-bab2-377c17509765/contact-flow/44c71d08-1128-427b-acf1-8592f16d8169"
+    },
+    {
+      "Sid": "ConnectStartContactStreaming",
+      "Effect": "Allow",
+      "Action": "connect:StartContactStreaming",
+      "Resource": "arn:aws:connect:us-east-1:042278586355:instance/1029ff15-e0f3-4b9c-bab2-377c17509765/contact/*"
+    },
+    {
+      "Sid": "ConnectParticipant",
+      "Effect": "Allow",
+      "Action": [
+        "connect-participant:CreateParticipantConnection",
+        "connect-participant:SendMessage"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "TelegramSecret",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:us-east-1:042278586355:secret:telegram-inbound-adapter/telegram-bot-*"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "connect-nlu-router-menu"
+version = "0.1.0"
+description = "Servicio de NLU (deteccion de intencion) para el enrutamiento omnicanal de Amazon Connect. Grafo de clasificacion en LangGraph, desplegado como AWS Lambda."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+dependencies = [
+    "boto3>=1.40",
+    "langgraph>=0.2",
+    "langchain-aws>=0.2",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.8",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "ruff>=0.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/connect_nlu_router_menu"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

@@ -1,0 +1,4 @@
+boto3
+pydantic>=2.11
+pydantic-settings>=2.8
+httpx>=0.28

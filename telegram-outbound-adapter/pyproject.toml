@@ -1,0 +1,48 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "telegram-outbound-adapter"
+version = "0.1.0"
+description = "Lambda adapter that relays Amazon Connect chat streaming events (agent replies, flow prompts) back to Telegram"
+readme = "README.md"
+requires-python = ">=3.14"
+license = { text = "Proprietary" }
+dependencies = [
+    "boto3>=1.40",
+    "pydantic>=2.11",
+    "pydantic-settings>=2.8",
+    "httpx>=0.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "moto[dynamodb]>=5.0",
+    "ruff>=0.8",
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-instrumentation-botocore>=0.48b0",
+    "opentelemetry-instrumentation-httpx>=0.48b0",
+    "opentelemetry-instrumentation-logging>=0.48b0",
+    # Needed for boto3 to resolve credentials via this machine's `aws login`
+    # (IAM Identity Center device auth) setup -- without it, a fresh Python
+    # process can fail at import time with MissingDependencyException the
+    # moment a cached token needs refreshing.
+    "botocore[crt]",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/telegram_outbound_adapter"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

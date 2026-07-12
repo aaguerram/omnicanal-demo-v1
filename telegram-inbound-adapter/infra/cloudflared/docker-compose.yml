@@ -1,0 +1,9 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: telegram-inbound-adapter-tunnel
+    restart: unless-stopped
+    command: >-
+      tunnel --no-autoupdate --url http://host.docker.internal:${LOCAL_PORT:-8000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

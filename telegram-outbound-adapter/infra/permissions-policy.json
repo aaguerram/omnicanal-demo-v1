@@ -1,0 +1,30 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "Logs",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "arn:aws:logs:us-east-1:042278586355:log-group:/aws/lambda/telegram-outbound-adapter:*"
+    },
+    {
+      "Sid": "DynamoDbSessions",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": "arn:aws:dynamodb:us-east-1:042278586355:table/ConversationSessions"
+    },
+    {
+      "Sid": "TelegramSecret",
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:us-east-1:042278586355:secret:telegram-inbound-adapter/telegram-bot-*"
+    }
+  ]
+}

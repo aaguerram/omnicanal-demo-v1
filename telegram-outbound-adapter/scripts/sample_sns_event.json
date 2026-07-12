@@ -1,0 +1,9 @@
+{
+  "Records": [
+    {
+      "Sns": {
+        "Message": "{\"ContactId\":\"REPLACE-WITH-A-REAL-CONTACT-ID\",\"ParticipantRole\":\"AGENT\",\"Type\":\"MESSAGE\",\"Content\":\"Hola, en que puedo ayudarte?\",\"ContentType\":\"text/plain\"}"
+      }
+    }
+  ]
+}
