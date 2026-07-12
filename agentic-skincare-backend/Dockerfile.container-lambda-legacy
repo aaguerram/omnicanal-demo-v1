@@ -1,0 +1,31 @@
+# LEGACY / no usado -- este era el Dockerfile de la Lambda contenedor
+# original. El hosting de agentic-skincare-backend se movio a Bedrock
+# AgentCore Runtime (ver entrypoints/agentcore_app.py, scripts/deploy_agentcore.ps1
+# y ../context.md); ese Dockerfile lo genera automaticamente el
+# bedrock-agentcore-starter-toolkit (`agentcore configure`), no este archivo.
+# Se renombro (de `Dockerfile` a este nombre) porque el toolkit auto-detecta
+# y reutiliza cualquier `Dockerfile` en la raiz del proyecto, y este apuntaba
+# al entrypoint/base image equivocados (Lambda x86_64, no AgentCore arm64).
+# Se deja intacto por si se necesita volver al camino de Lambda contenedor --
+# ver scripts/package_lambda.ps1 (ahora usa `-f` para apuntar aca).
+#
+# Container-image Lambda -- the zip-based deploy (scripts/package_lambda.ps1's
+# original approach) came out to 459 MB unzipped, over Lambda's 250 MB zip
+# limit (langchain-community's transitive weight pulled in by
+# langchain-google-firestore). Container images go up to 10 GB, so the same
+# dependency set just fits without any fragile pruning of "unused" transitive
+# packages.
+FROM public.ecr.aws/lambda/python:3.12
+
+COPY requirements-lambda.txt ${LAMBDA_TASK_ROOT}/requirements-lambda.txt
+RUN pip install --no-cache-dir -r ${LAMBDA_TASK_ROOT}/requirements-lambda.txt --target "${LAMBDA_TASK_ROOT}"
+
+# Solo lo que entrypoints/lambda_handler.py importa en tiempo de ejecucion --
+# entrypoints/web.py (demo Gradio) y scripts/ (ingesta de PDFs) quedan afuera
+# a proposito, no estan en requirements-lambda.txt.
+COPY core ${LAMBDA_TASK_ROOT}/core
+COPY features ${LAMBDA_TASK_ROOT}/features
+COPY repositories ${LAMBDA_TASK_ROOT}/repositories
+COPY entrypoints/lambda_handler.py ${LAMBDA_TASK_ROOT}/entrypoints/lambda_handler.py
+
+CMD ["entrypoints.lambda_handler.lambda_handler"]

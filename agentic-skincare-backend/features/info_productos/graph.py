@@ -1,11 +1,12 @@
 import os
 from typing import Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-from langchain_google_vertexai import ChatVertexAI, VertexAIEmbeddings
+from dotenv import load_dotenv
+from core.settings import get_settings
+from core.state import AgentState
+from langchain_aws import BedrockEmbeddings, ChatBedrockConverse
 from langchain_google_firestore import FirestoreVectorStore
 from google.cloud import firestore
-from dotenv import load_dotenv
-from core.state import AgentState
 
 load_dotenv()
 
@@ -27,17 +28,19 @@ def info_productos_node(state: AgentState) -> Dict[str, Any]:
                 parts.append(part)
         query_text = " ".join(parts)
     
-    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "skincare-ai-commerce")
-    
-    llm = ChatVertexAI(
-        model="gemini-2.5-flash-lite", 
-        project=project_id,
-        temperature=0.2
+    settings = get_settings()
+    project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", settings.google_cloud_project)
+
+    llm = ChatBedrockConverse(
+        model_id=settings.nova_model_id,
+        region_name=settings.aws_region,
+        temperature=0.0,
+        max_tokens=1470,
     )
-    
-    embeddings = VertexAIEmbeddings(
-        model_name="text-embedding-004", 
-        project=project_id
+
+    embeddings = BedrockEmbeddings(
+        model_id=settings.bedrock_embedding_model_id,
+        region_name=settings.aws_region,
     )
     
     try:

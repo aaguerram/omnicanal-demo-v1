@@ -1,0 +1,14 @@
+venv/
+build/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+tests/
+pdf_productos/
+scripts/
+entrypoints/web.py
+*.zip
+gcp-service-account-key.json
+.env
+.git/

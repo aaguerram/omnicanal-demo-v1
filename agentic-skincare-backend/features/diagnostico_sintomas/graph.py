@@ -1,11 +1,11 @@
-import os
 import json
 from typing import Dict, Any
 from langchain_core.messages import SystemMessage, ToolMessage, AIMessage
-from langchain_google_vertexai import ChatVertexAI
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
+from core.settings import get_settings
 from core.state import AgentState
+from langchain_aws import ChatBedrockConverse
 
 load_dotenv()
 
@@ -20,10 +20,12 @@ def diagnostico_node(state: AgentState) -> Dict[str, Any]:
     messages = state.get("messages", [])
     patient_info = state.get("patient_info", {})
     
-    llm = ChatVertexAI(
-        model="gemini-2.5-flash-lite", 
-        project=os.environ.get("GOOGLE_CLOUD_PROJECT", "skincare-ai-commerce"),
-        temperature=0.5
+    settings = get_settings()
+    llm = ChatBedrockConverse(
+        model_id=settings.nova_model_id,
+        region_name=settings.aws_region,
+        temperature=0.0,
+        max_tokens=1470,
     )
     
     llm_with_tools = llm.bind_tools([UpdatePatientInfo])

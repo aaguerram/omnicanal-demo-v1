@@ -3,6 +3,8 @@ __pycache__/
 .env
 *.pyc
 .DS_Store
+*.zip
+gcp-service-account-key.json
 
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,visualstudiocode

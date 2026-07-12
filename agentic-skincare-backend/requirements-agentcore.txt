@@ -1,0 +1,36 @@
+# Runtime-only subset de requirements.txt para el contenedor de Bedrock
+# AgentCore Runtime (ver scripts/deploy_agentcore.ps1 -- el
+# bedrock-agentcore-starter-toolkit arma el Dockerfile a partir de este
+# archivo, build remoto en CodeBuild, sin Docker local). Mismo criterio que
+# requirements-lambda.txt: excluye fastapi/uvicorn/gradio (demo
+# entrypoints/web.py) y pdfplumber (ingesta offline,
+# scripts/ingestar_pdfs.py) -- entrypoints/agentcore_app.py no los importa.
+
+# ── Core LangChain / LangGraph ───────────────────────────────────────────────
+langchain-core>=0.3.85,<1.0.0
+langchain>=0.3.27,<1.0.0
+langgraph>=0.6.0,<1.0.0
+
+# ── Google Cloud integrations ────────────────────────────────────────────────
+# Unico uso de Google que queda: Firestore como vector store del RAG -- el
+# chat y los embeddings ya no usan Vertex AI/Gemini (ver bloque AWS abajo).
+langchain-google-firestore==0.5.0
+google-cloud-firestore>=2.16.0,<3.0.0
+
+# ── Data validation / settings ────────────────────────────────────────────────
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.8
+
+# ── AWS ────────────────────────────────────────────────────────────────────────
+boto3
+# langchain-aws 0.2.x: ultima serie compatible con langchain-core<1.0.0 (ver
+# requirements.txt para el detalle del pin). ChatBedrockConverse/BedrockEmbeddings.
+langchain-aws>=0.2.35,<0.3.0
+
+# ── Bedrock AgentCore Runtime SDK ────────────────────────────────────────────
+# entrypoints/agentcore_app.py -- BedrockAgentCoreApp (servidor HTTP que
+# expone /invocations y /ping dentro del contenedor).
+bedrock-agentcore
+
+# ── Environment management ────────────────────────────────────────────────────
+python-dotenv>=1.0.0

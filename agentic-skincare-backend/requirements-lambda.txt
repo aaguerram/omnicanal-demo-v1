@@ -1,0 +1,28 @@
+# Runtime-only subset of requirements.txt for the Lambda package (see
+# scripts/package_lambda.ps1) -- excludes fastapi/uvicorn/gradio (Gradio demo
+# entrypoint, entrypoints/web.py) and pdfplumber (offline PDF ingestion only,
+# scripts/ingestar_pdfs.py), none of which entrypoints/lambda_handler.py imports.
+
+# ── Core LangChain / LangGraph ───────────────────────────────────────────────
+langchain-core>=0.3.85,<1.0.0
+langchain>=0.3.27,<1.0.0
+langgraph>=0.6.0,<1.0.0
+
+# ── Google Cloud integrations ────────────────────────────────────────────────
+# Unico uso de Google que queda: Firestore como vector store del RAG -- el
+# chat y los embeddings ya no usan Vertex AI/Gemini (ver bloque AWS abajo).
+langchain-google-firestore==0.5.0
+google-cloud-firestore>=2.16.0,<3.0.0
+
+# ── Data validation / settings ────────────────────────────────────────────────
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.8
+
+# ── AWS ────────────────────────────────────────────────────────────────────────
+boto3
+# langchain-aws 0.2.x: ultima serie compatible con langchain-core<1.0.0 (ver
+# requirements.txt para el detalle del pin). ChatBedrockConverse/BedrockEmbeddings.
+langchain-aws>=0.2.35,<0.3.0
+
+# ── Environment management ────────────────────────────────────────────────────
+python-dotenv>=1.0.0

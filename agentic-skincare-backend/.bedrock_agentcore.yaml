@@ -1,0 +1,62 @@
+default_agent: agentic_skincare_backend
+agents:
+  agentic_skincare_backend:
+    name: agentic_skincare_backend
+    language: python
+    node_version: '20'
+    entrypoint: C:/Users/TL/Documents/Copia_Documentos/intuito/omnicanalidad/agentic-skincare-backend/entrypoints/agentcore_app.py
+    deployment_type: container
+    runtime_type: null
+    platform: linux/arm64
+    container_runtime: docker
+    source_path: C:\Users\TL\Documents\Copia_Documentos\intuito\omnicanalidad\agentic-skincare-backend
+    aws:
+      execution_role: arn:aws:iam::042278586355:role/agentic-skincare-backend-agentcore-role
+      execution_role_auto_create: false
+      account: 042278586355
+      region: us-east-1
+      ecr_repository: 042278586355.dkr.ecr.us-east-1.amazonaws.com/bedrock-agentcore-agentic_skincare_backend
+      ecr_auto_create: false
+      s3_path: null
+      s3_auto_create: false
+      network_configuration:
+        network_mode: PUBLIC
+        network_mode_config: null
+      protocol_configuration:
+        server_protocol: HTTP
+      observability:
+        enabled: true
+      lifecycle_configuration:
+        idle_runtime_session_timeout: null
+        max_lifetime: null
+    bedrock_agentcore:
+      agent_id: agentic_skincare_backend-zq5JWX6oVy
+      agent_arn: arn:aws:bedrock-agentcore:us-east-1:042278586355:runtime/agentic_skincare_backend-zq5JWX6oVy
+      agent_session_id: null
+    codebuild:
+      project_name: bedrock-agentcore-agentic_skincare_backend-builder
+      execution_role: arn:aws:iam::042278586355:role/AmazonBedrockAgentCoreSDKCodeBuild-us-east-1-8a30202fb4
+      source_bucket: bedrock-agentcore-codebuild-sources-042278586355-us-east-1
+    memory:
+      mode: STM_ONLY
+      memory_id: agentic_skincare_backend_mem-Vf3tuI9I4Q
+      memory_arn: arn:aws:bedrock-agentcore:us-east-1:042278586355:memory/agentic_skincare_backend_mem-Vf3tuI9I4Q
+      memory_name: agentic_skincare_backend_mem
+      event_expiry_days: 30
+      first_invoke_memory_check_done: true
+      was_created_by_toolkit: false
+    identity:
+      credential_providers: []
+      workload: null
+    aws_jwt:
+      enabled: false
+      audiences: []
+      signing_algorithm: ES384
+      issuer_url: null
+      duration_seconds: 300
+    authorizer_configuration: null
+    request_header_configuration: null
+    oauth_configuration: null
+    api_key_env_var_name: null
+    api_key_credential_provider_name: null
+    is_generated_by_agentcore_create: false

@@ -1,13 +1,32 @@
-import os
 import glob
-from dotenv import load_dotenv
+import os
+
 import pdfplumber
-from langchain_core.documents import Document
-from langchain_google_vertexai import VertexAIEmbeddings
-from langchain_google_firestore import FirestoreVectorStore
+from dotenv import load_dotenv
 from google.cloud import firestore
+from langchain_aws import BedrockEmbeddings
+from langchain_core.documents import Document
+from langchain_google_firestore import FirestoreVectorStore
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 load_dotenv()
+
+# amazon.titan-embed-text-v2:0 rechaza inputs de mas de 50000 caracteres
+# (ValidationException: "expected maxLength: 50000") -- el vademecum completo
+# solo (un PDF) ya extrae ~96000 caracteres de texto, asi que cada PDF entero
+# como un unico Document (como hacia esta ingesta antes de este chunking) no
+# entra. chunk_size deja margen bajo el limite real del modelo.
+CHUNK_SIZE = 4000
+CHUNK_OVERLAP = 400
+
+# Mismos defaults que core/settings.py (Settings.bedrock_embedding_model_id /
+# aws_region) -- repetidos acá en vez de importar core.settings porque este
+# script corre standalone (`python scripts/ingestar_pdfs.py`), sin el
+# directorio raiz del proyecto en sys.path.
+BEDROCK_EMBEDDING_MODEL_ID = os.environ.get(
+    "BEDROCK_EMBEDDING_MODEL_ID", "amazon.titan-embed-text-v2:0"
+)
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
 
 def ingestar():
     project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "skincare-ai-commerce")
@@ -41,13 +60,21 @@ def ingestar():
     if not documents:
         print("No se pudo extraer texto de los PDFs.")
         return
-        
-    print(f"Se extrajeron {len(documents)} documentos. Generando embeddings y guardando...")
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP
+    )
+    chunks = splitter.split_documents(documents)
+
+    print(
+        f"Se extrajeron {len(documents)} documentos, divididos en {len(chunks)} "
+        "chunks. Generando embeddings y guardando..."
+    )
     
     # 2. Embeddings
-    embeddings = VertexAIEmbeddings(
-        model_name="text-embedding-004", 
-        project=project_id
+    embeddings = BedrockEmbeddings(
+        model_id=BEDROCK_EMBEDDING_MODEL_ID,
+        region_name=AWS_REGION,
     )
     
     # 3. Firestore Vector Store
@@ -55,8 +82,8 @@ def ingestar():
     
     # FirestoreVectorStore requiere que la base de datos esté configurada en GCP
     try:
-        vector_store = FirestoreVectorStore.from_documents(
-            documents=documents,
+        FirestoreVectorStore.from_documents(
+            documents=chunks,
             embedding=embeddings,
             collection="catalogo_productos",
             client=db

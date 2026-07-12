@@ -1,10 +1,10 @@
 from typing import Literal
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_vertexai import ChatVertexAI
 from pydantic import BaseModel, Field
-import os
 from dotenv import load_dotenv
+from core.settings import get_settings
 from core.state import AgentState
+from langchain_aws import ChatBedrockConverse
 
 load_dotenv()
 
@@ -18,10 +18,12 @@ def route_message(state: AgentState) -> Literal["diagnostico_sintomas", "info_pr
     if not messages:
         return "diagnostico_sintomas"
         
-    llm = ChatVertexAI(
-        model="gemini-2.5-flash-lite", 
-        project=os.environ.get("GOOGLE_CLOUD_PROJECT", "skincare-ai-commerce"),
-        temperature=0.0
+    settings = get_settings()
+    llm = ChatBedrockConverse(
+        model_id=settings.nova_model_id,
+        region_name=settings.aws_region,
+        temperature=0.0,
+        max_tokens=1470,
     )
     
     structured_llm = llm.with_structured_output(RouterResponse)
