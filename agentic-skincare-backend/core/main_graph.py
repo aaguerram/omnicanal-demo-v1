@@ -17,19 +17,18 @@ def build_graph():
     # Usamos un conditional edge desde el inicio para enrutar el mensaje
     workflow.set_conditional_entry_point(
         route_message,
-        {
-            "diagnostico_sintomas": "diagnostico_sintomas",
-            "info_productos": "info_productos"
-        }
+        {"diagnostico_sintomas": "diagnostico_sintomas", "info_productos": "info_productos"},
     )
 
     # Ambas features pasan por evaluar_estado antes de terminar el turno --
-    # ahi se decide turn_status (en_progreso/finalizado/no_resuelto), que
-    # consume entrypoints/lambda_handler.py para el escalamiento a un asesor.
+    # ahi se decide turn_status (en_progreso/finalizado/no_resuelto) y si el
+    # cliente pidio terminar la conversacion. core/turn_service.py convierte
+    # esas senales en el contrato de los entrypoints.
     workflow.add_edge("diagnostico_sintomas", "evaluar_estado")
     workflow.add_edge("info_productos", "evaluar_estado")
     workflow.add_edge("evaluar_estado", END)
 
     return workflow.compile()
+
 
 app_graph = build_graph()

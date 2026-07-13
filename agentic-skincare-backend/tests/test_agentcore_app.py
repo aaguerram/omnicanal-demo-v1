@@ -32,19 +32,34 @@ def agentcore_app(monkeypatch):
 
 def test_invoke_delegates_to_process_turn(agentcore_app, monkeypatch):
     stub = MagicMock(
-        return_value={"response_text": "hola, soy Luna", "status": "en_progreso", "escalate": False}
+        return_value={
+            "response_text": "hola, soy Luna",
+            "status": "en_progreso",
+            "escalate": False,
+            "end_conversation": False,
+        }
     )
     monkeypatch.setattr(agentcore_app, "process_turn", stub)
 
     result = agentcore_app.invoke({"contact_id": "c1", "message": "hola"})
 
-    assert result == {"response_text": "hola, soy Luna", "status": "en_progreso", "escalate": False}
+    assert result == {
+        "response_text": "hola, soy Luna",
+        "status": "en_progreso",
+        "escalate": False,
+        "end_conversation": False,
+    }
     stub.assert_called_once_with("c1", "hola")
 
 
 def test_invoke_prefers_stable_conversation_id(agentcore_app, monkeypatch):
     stub = MagicMock(
-        return_value={"response_text": "hola", "status": "en_progreso", "escalate": False}
+        return_value={
+            "response_text": "hola",
+            "status": "en_progreso",
+            "escalate": False,
+            "end_conversation": False,
+        }
     )
     monkeypatch.setattr(agentcore_app, "process_turn", stub)
 
@@ -56,7 +71,14 @@ def test_invoke_prefers_stable_conversation_id(agentcore_app, monkeypatch):
 
 
 def test_invoke_handles_missing_fields(agentcore_app, monkeypatch):
-    stub = MagicMock(return_value={"response_text": "", "status": "en_progreso", "escalate": False})
+    stub = MagicMock(
+        return_value={
+            "response_text": "",
+            "status": "en_progreso",
+            "escalate": False,
+            "end_conversation": False,
+        }
+    )
     monkeypatch.setattr(agentcore_app, "process_turn", stub)
 
     agentcore_app.invoke({})

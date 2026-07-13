@@ -14,9 +14,15 @@ class _FakeGraph:
     shape core.estado_turno.evaluar_estado_node would produce.
     """
 
-    def __init__(self, turn_status: str, reply: str = "respuesta de prueba"):
+    def __init__(
+        self,
+        turn_status: str,
+        reply: str = "respuesta de prueba",
+        end_conversation: bool = False,
+    ):
         self.turn_status = turn_status
         self.reply = reply
+        self.end_conversation = end_conversation
 
     def invoke(self, state):
         messages = list(state["messages"]) + [AIMessage(content=self.reply)]
@@ -24,6 +30,7 @@ class _FakeGraph:
             "messages": messages,
             "patient_info": state.get("patient_info", {}),
             "turn_status": self.turn_status,
+            "end_conversation": self.end_conversation,
         }
 
 
@@ -45,7 +52,12 @@ def turn_service(monkeypatch):
 
 def test_empty_message_is_a_noop(turn_service):
     result = turn_service.process_turn("c1", "  ")
-    assert result == {"response_text": "", "status": "en_progreso", "escalate": False}
+    assert result == {
+        "response_text": "",
+        "status": "en_progreso",
+        "escalate": False,
+        "end_conversation": False,
+    }
 
 
 def test_finalizado_stays_with_agentcore(turn_service, monkeypatch):
@@ -55,6 +67,41 @@ def test_finalizado_stays_with_agentcore(turn_service, monkeypatch):
 
     assert result["status"] == "finalizado"
     assert result["escalate"] is False
+    assert result["end_conversation"] is False
+    assert result["response_text"] == "respuesta de prueba"
+
+
+def test_explicit_close_returns_deterministic_goodbye_without_escalating(turn_service, monkeypatch):
+    monkeypatch.setattr(
+        turn_service,
+        "app_graph",
+        _FakeGraph("en_progreso", reply="respuesta variable", end_conversation=True),
+    )
+
+    result = turn_service.process_turn("c1", "eso es todo, puedes cerrar")
+
+    assert result == {
+        "response_text": (
+            "Entendido. Gracias por conversar con Luna. He finalizado este chat. "
+            "Tu proximo mensaje comenzara desde el menu inicial."
+        ),
+        "status": "finalizado",
+        "escalate": False,
+        "end_conversation": True,
+    }
+
+
+def test_finalized_status_alone_does_not_end_conversation(turn_service, monkeypatch):
+    monkeypatch.setattr(
+        turn_service,
+        "app_graph",
+        _FakeGraph("finalizado", end_conversation=False),
+    )
+
+    result = turn_service.process_turn("c1", "gracias, cuanto cuesta?")
+
+    assert result["status"] == "finalizado"
+    assert result["end_conversation"] is False
     assert result["response_text"] == "respuesta de prueba"
 
 
@@ -105,3 +152,4 @@ def test_graph_failure_never_raises_and_escalates(turn_service, monkeypatch):
 
     assert result["escalate"] is True
     assert result["status"] == "no_resuelto"
+    assert result["end_conversation"] is False

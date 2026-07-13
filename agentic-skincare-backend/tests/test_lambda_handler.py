@@ -82,7 +82,12 @@ def test_extract_prefers_connect_parameter_conversation_id(handler):
 
 def test_lambda_handler_delegates_to_process_turn_and_maps_escalate(handler, monkeypatch):
     stub = MagicMock(
-        return_value={"response_text": "hola, soy Luna", "status": "en_progreso", "escalate": False}
+        return_value={
+            "response_text": "hola, soy Luna",
+            "status": "en_progreso",
+            "escalate": False,
+            "end_conversation": False,
+        }
     )
     monkeypatch.setattr(handler, "process_turn", stub)
 
@@ -92,16 +97,39 @@ def test_lambda_handler_delegates_to_process_turn_and_maps_escalate(handler, mon
         "response_text": "hola, soy Luna",
         "status": "en_progreso",
         "escalate": "false",
+        "end_conversation": "false",
     }
     stub.assert_called_once_with("c1", "hola")
 
 
 def test_lambda_handler_maps_escalate_true(handler, monkeypatch):
     stub = MagicMock(
-        return_value={"response_text": "listo", "status": "finalizado", "escalate": True}
+        return_value={
+            "response_text": "listo",
+            "status": "finalizado",
+            "escalate": True,
+            "end_conversation": False,
+        }
     )
     monkeypatch.setattr(handler, "process_turn", stub)
 
     result = handler.lambda_handler({"contact_id": "c1", "message": "gracias"}, None)
 
     assert result["escalate"] == "true"
+
+
+def test_lambda_handler_maps_end_conversation_true(handler, monkeypatch):
+    stub = MagicMock(
+        return_value={
+            "response_text": "chat finalizado",
+            "status": "finalizado",
+            "escalate": False,
+            "end_conversation": True,
+        }
+    )
+    monkeypatch.setattr(handler, "process_turn", stub)
+
+    result = handler.lambda_handler({"contact_id": "c1", "message": "eso es todo"}, None)
+
+    assert result["end_conversation"] == "true"
+    assert result["escalate"] == "false"

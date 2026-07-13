@@ -65,6 +65,10 @@ _FALLBACK_RESPONSE = (
     "Tuvimos un inconveniente tecnico de nuestro lado. Te voy a conectar con "
     "un asesor para que te ayude directamente."
 )
+_END_CONVERSATION_RESPONSE = (
+    "Entendido. Gracias por conversar con Luna. He finalizado este chat. "
+    "Tu proximo mensaje comenzara desde el menu inicial."
+)
 _MAX_RESPONSE_CHARS = 6000  # limite total del texto Play prompt/MessageParticipant de Connect
 
 
@@ -96,8 +100,9 @@ def process_turn(conversation_id: str | None, message: str) -> dict[str, Any]:
     "error tecnico" de "no pude ayudarte".
 
     Devuelve {"response_text": str, "status": "en_progreso"|"finalizado"|"no_resuelto",
-    "escalate": bool} -- la serializacion a STRING_MAP (Connect exige
-    "true"/"false" como string) es responsabilidad de quien llama.
+    "escalate": bool, "end_conversation": bool} -- la serializacion a
+    STRING_MAP (Connect exige "true"/"false" como string) es responsabilidad
+    de quien llama.
     """
     logger.info(
         "skincare_turn_received has_conversation_id=%s message_len=%s",
@@ -106,7 +111,12 @@ def process_turn(conversation_id: str | None, message: str) -> dict[str, Any]:
     )
 
     if not message or not message.strip():
-        return {"response_text": "", "status": "en_progreso", "escalate": False}
+        return {
+            "response_text": "",
+            "status": "en_progreso",
+            "escalate": False,
+            "end_conversation": False,
+        }
 
     try:
         prior_messages = _sessions.load_messages(conversation_id) if conversation_id else []
@@ -121,14 +131,20 @@ def process_turn(conversation_id: str | None, message: str) -> dict[str, Any]:
         result = app_graph.invoke(initial_state)
 
         turn_status = result.get("turn_status", "en_progreso")
-        consecutive_unresolved = (
-            consecutive_unresolved + 1 if turn_status == "no_resuelto" else 0
-        )
+        end_conversation = result.get("end_conversation", False) is True
+        if end_conversation:
+            # Una solicitud explicita de cierre resuelve el objetivo actual,
+            # pero no es un escalamiento a un humano. La senal separada evita
+            # confundirla con cualquier turno simplemente "finalizado".
+            turn_status = "finalizado"
+        consecutive_unresolved = consecutive_unresolved + 1 if turn_status == "no_resuelto" else 0
         # ``finalizado`` significa que Luna resolvio el objetivo de este
         # turno, no que haga falta pagar/esperar una atencion humana. El modo
         # skincare sigue vigente y los mensajes posteriores vuelven al mismo
         # AgentCore. Solo se deriva por incapacidad repetida o falla tecnica.
-        escalate = consecutive_unresolved >= _settings.max_consecutive_unresolved
+        escalate = (
+            not end_conversation and consecutive_unresolved >= _settings.max_consecutive_unresolved
+        )
 
         if conversation_id:
             _sessions.save_turn(
@@ -141,16 +157,26 @@ def process_turn(conversation_id: str | None, message: str) -> dict[str, Any]:
             )
 
         logger.info(
-            "skincare_turn_processed status=%s consecutive_unresolved=%s escalate=%s",
+            "skincare_turn_processed status=%s consecutive_unresolved=%s "
+            "end_conversation=%s escalate=%s",
             turn_status,
             consecutive_unresolved,
+            end_conversation,
             escalate,
         )
         return {
-            "response_text": _response_text(result),
+            "response_text": (
+                _END_CONVERSATION_RESPONSE if end_conversation else _response_text(result)
+            ),
             "status": turn_status,
             "escalate": escalate,
+            "end_conversation": end_conversation,
         }
     except Exception:
         logger.exception("skincare_turn_failed")
-        return {"response_text": _FALLBACK_RESPONSE, "status": "no_resuelto", "escalate": True}
+        return {
+            "response_text": _FALLBACK_RESPONSE,
+            "status": "no_resuelto",
+            "escalate": True,
+            "end_conversation": False,
+        }

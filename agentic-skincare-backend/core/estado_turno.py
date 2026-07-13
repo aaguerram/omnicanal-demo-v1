@@ -24,6 +24,14 @@ class TurnStatusResult(BaseModel):
             "normalmente (preguntas de seguimiento, falta informacion)."
         )
     )
+    end_conversation: bool = Field(
+        description=(
+            "True solo si el ultimo mensaje del cliente expresa de forma "
+            "inequivoca que ya no necesita ayuda o que desea cerrar/finalizar "
+            "la conversacion. False si solo agradece, rechaza un producto, "
+            "hace una pregunta o desea seguir conversando."
+        )
+    )
 
 
 def _message_text(message: Any) -> str:
@@ -44,8 +52,9 @@ SYSTEM_PROMPT = """
 Evaluas el estado de una conversacion de un asistente virtual de skincare/ventas
 (Luna) que atiende al cliente directamente.
 
-Tu unica tarea es clasificar el ESTADO DEL TURNO que acaba de terminar en
-exactamente una de estas tres categorias:
+Tu unica tarea es clasificar el ESTADO DEL TURNO que acaba de terminar y
+decidir si el cliente pidio terminar la conversacion. Devuelve los dos campos
+de la salida estructurada: status y end_conversation.
 
 - finalizado: Luna ya dio una recomendacion de producto concreta, o ya resumio
   el diagnostico de piel del cliente, y el objetivo de este turno quedo
@@ -57,18 +66,31 @@ exactamente una de estas tres categorias:
 - en_progreso: la conversacion sigue normalmente -- Luna esta haciendo
   preguntas de seguimiento o todavia falta informacion antes de poder ayudar.
 
-Respondes solo con la categoria, sin texto adicional.
+Reglas estrictas para end_conversation:
+
+- true SOLO cuando el ultimo mensaje del cliente expresa de forma inequivoca
+  que ya no necesita nada mas o que desea cerrar/finalizar el chat. Ejemplos:
+  "eso es todo", "no necesito nada mas", "puedes cerrar", "terminemos".
+- false si el cliente solo agradece, incluso si el objetivo del turno quedo
+  resuelto.
+- false si el mensaje contiene una pregunta o solicitud adicional, por
+  ejemplo "gracias, cuanto cuesta?".
+- false si rechaza un producto o pide otra opcion, por ejemplo "no quiero ese
+  producto, muestrame otro".
+- No deduzcas end_conversation=true a partir de status=finalizado. Son señales
+  independientes: finalizado describe el objetivo del turno; end_conversation
+  exige una solicitud explicita e inequivoca del cliente.
 """
 
 
 def evaluar_estado_node(state: AgentState) -> dict[str, Any]:
     messages = state.get("messages", [])
     if not messages:
-        return {"turn_status": "en_progreso"}
+        return {"turn_status": "en_progreso", "end_conversation": False}
 
     last_ai = next((m for m in reversed(messages) if isinstance(m, AIMessage)), None)
     if last_ai is None or not _message_text(last_ai).strip():
-        return {"turn_status": "en_progreso"}
+        return {"turn_status": "en_progreso", "end_conversation": False}
 
     last_human = next((m for m in reversed(messages) if isinstance(m, HumanMessage)), None)
     patient_info = state.get("patient_info", {})
@@ -94,10 +116,13 @@ def evaluar_estado_node(state: AgentState) -> dict[str, Any]:
         response = structured_llm.invoke(
             [SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=transcript)]
         )
-        return {"turn_status": response.status}
+        return {
+            "turn_status": response.status,
+            "end_conversation": response.end_conversation,
+        }
     except Exception as e:
         # Nunca debe tirar la conversacion completa por un fallo de este
         # clasificador -- se sigue tratando como en curso, el Lambda handler
         # decide el escalamiento solo con base en el contador de intentos.
         print(f"Error in estado_turno: {e}")
-        return {"turn_status": "en_progreso"}
+        return {"turn_status": "en_progreso", "end_conversation": False}

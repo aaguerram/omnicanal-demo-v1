@@ -82,7 +82,8 @@ del mensaje del cliente ni `patient_info`** (nivel de acné, alergias, tipo de
 piel) -- son datos de salud/sensibles y las reglas del proyecto
 (`.agents/rules/04-features-seguridad-testing.md`) prohíben registrarlos.
 Solo se loguea metadata de control (presencia del id, largo del mensaje,
-`turn_status`, contador de intentos, `escalate`), nunca identificadores.
+`turn_status`, contador de intentos, `end_conversation`, `escalate`), nunca
+identificadores.
 
 ### Por qué hace falta estado persistido
 
@@ -94,7 +95,7 @@ persiste ambos (más el contador de turnos "no_resuelto" seguidos) en DynamoDB,
 tabla `SkincareAgentSessions` (PK histórica `pk` = `contact#<conversation_id>`, TTL
 en `ttl`, mismo patrón single-table que `ConversationSessions`).
 
-### Contrato del Lambda
+### Contrato de AgentCore y del Lambda directo legado
 
 Igual que `connect-nlu-router-menu`, soporta dos formas de invocación:
 1. Directa por boto3: `{"conversation_id": "...", "contact_id": "...", "message": "..."}`.
@@ -102,9 +103,18 @@ Igual que `connect-nlu-router-menu`, soporta dos formas de invocación:
    `event["Details"]["Parameters"]` (+ `ContactData.ContactId` como fallback
    si el flow no pasa `conversation_id` explícito).
 
-Responde siempre un `STRING_MAP` plano (Connect lo exige):
+AgentCore responde con booleanos nativos para que
+`agentic-skincare-adapter` traduzca el resultado a Amazon Connect:
+
 ```json
-{"response_text": "...", "status": "en_progreso|finalizado|no_resuelto", "escalate": "true|false"}
+{"response_text": "...", "status": "en_progreso|finalizado|no_resuelto", "escalate": false, "end_conversation": false}
+```
+
+El Lambda directo legado responde siempre un `STRING_MAP` plano (Connect lo
+exige):
+
+```json
+{"response_text": "...", "status": "en_progreso|finalizado|no_resuelto", "escalate": "true|false", "end_conversation": "true|false"}
 ```
 `escalate="true"` es la señal que el contact flow usa (bloque `Compare`) para
 transferir a `F_Handoff_Humano` (`Q_Ventas`). Se pone en `true` cuando:
@@ -115,6 +125,19 @@ transferir a `F_Handoff_Humano` (`Q_Ventas`). Se pone en `true` cuando:
 `status == "finalizado"` solo indica que Luna resolvió el objetivo del turno:
 no escala ni cobra atención humana. El siguiente mensaje continúa en el mismo
 AgentCore mientras el routing siga vigente.
+
+`end_conversation=true` es una señal independiente. El mismo clasificador de
+estado del turno la activa, sin otra llamada al modelo, solo cuando el último
+mensaje del cliente expresa inequívocamente que ya no necesita ayuda o que
+desea cerrar el chat (por ejemplo, "eso es todo" o "puedes cerrar"). Un
+agradecimiento con otra pregunta o el rechazo de un producto mantienen el
+valor en `false`; tampoco se infiere a partir de `status="finalizado"`.
+
+Cuando se activa, `process_turn` devuelve una despedida determinística, fuerza
+`status="finalizado"`, conserva `escalate=false` y entrega
+`end_conversation=true`. El adapter puede entonces limpiar el routing de
+skincare; Amazon Connect envía esa despedida y desconecta el contacto. El
+siguiente mensaje del cliente vuelve a comenzar por el NLU inicial.
 
 Nunca propaga excepciones: cualquier falla (Bedrock caído, Firestore, DynamoDB,
 evento mal formado) devuelve una disculpa genérica con `escalate="true"`,

@@ -15,7 +15,7 @@ como Lambda cruda):
 
 Responde un STRING_MAP plano (Connect exige ResponseValidation=STRING_MAP):
 ``{"response_text": "...", "status": "en_progreso|finalizado|no_resuelto",
-"escalate": "true"|"false"}``.
+"escalate": "true"|"false", "end_conversation": "true"|"false"}``.
 """
 
 import logging
@@ -60,4 +60,5 @@ def lambda_handler(event: dict[str, Any], context: Any) -> dict[str, Any]:
         "response_text": result["response_text"],
         "status": result["status"],
         "escalate": "true" if result["escalate"] else "false",
+        "end_conversation": "true" if result["end_conversation"] else "false",
     }

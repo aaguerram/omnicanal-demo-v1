@@ -11,8 +11,9 @@ directamente): ``{"conversation_id": "...", "contact_id": "...",
 "message": "..."}``. ``conversation_id`` mantiene el historial aunque
 Connect cree otro contacto; ``contact_id`` es el fallback compatible. Responde
 ``{"response_text": "...", "status": "en_progreso|finalizado|no_resuelto",
-"escalate": true|false}`` -- sin la restriccion STRING_MAP de Connect (eso lo
-resuelve el adapter al traducir esta respuesta a lo que Connect exige).
+"escalate": true|false, "end_conversation": true|false}`` -- sin la
+restriccion STRING_MAP de Connect (eso lo resuelve el adapter al traducir esta
+respuesta a lo que Connect exige).
 
 Se ejecuta como servidor HTTP (``app.run()``, puerto 8080 por convencion del
 SDK de AgentCore) dentro del contenedor que construye
